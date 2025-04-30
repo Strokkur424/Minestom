@@ -1,7 +1,10 @@
 package net.minestom.server.entity;
 
+import net.kyori.adventure.translation.Translatable;
 import net.minestom.server.network.NetworkBuffer;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Locale;
 
 import static net.minestom.server.network.NetworkBuffer.BYTE;
 
@@ -10,7 +13,7 @@ import static net.minestom.server.network.NetworkBuffer.BYTE;
  * <p>
  * Can be set with {@link Player#setGameMode(GameMode)}.
  */
-public enum GameMode {
+public enum GameMode implements Translatable {
     SURVIVAL(false, false, false),
     CREATIVE(true, true, true),
     ADVENTURE(false, false, false),
@@ -19,11 +22,13 @@ public enum GameMode {
     private final boolean allowFlying;
     private final boolean invulnerable;
     private final boolean instantBreak;
+    private final String translationKey;
 
     GameMode(boolean allowFlying, boolean invulnerable, boolean instantBreak) {
         this.allowFlying = allowFlying;
         this.invulnerable = invulnerable;
         this.instantBreak = instantBreak;
+        this.translationKey = "gameMode." + this.name().toLowerCase(Locale.ENGLISH);
     }
 
     public boolean allowFlying() {
@@ -37,6 +42,11 @@ public enum GameMode {
     public boolean instantBreak() {
         return instantBreak;
     }
+    
+    @Override
+    public @NotNull String translationKey() {
+        return translationKey;
+    }    
 
     private static final GameMode[] VALUES = values();
 
