@@ -26,7 +26,7 @@ val shortDescription = "1.21 Lightweight Minecraft server"
 allprojects {
     apply(plugin = "java")
 
-    group = "net.minestom"
+    group = "net.strokkur"
     version = rootProject.version
     description = shortDescription
 
