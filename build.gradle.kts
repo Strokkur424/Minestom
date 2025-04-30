@@ -1,16 +1,24 @@
-import java.time.Duration
+import java.io.FileReader
+import java.util.*
 
 plugins {
     `java-library`
     alias(libs.plugins.blossom)
 
+    id("de.chojo.publishdata") version "1.4.0"
     `maven-publish`
+
     signing
     alias(libs.plugins.nexuspublish)
 }
 
+// Load environment variables
+val envProperties = Properties()
+var reader = FileReader(file(".env"))
+envProperties.load(reader)
+
 // Read env vars (used for publishing generally)
-version = System.getenv("MINESTOM_VERSION") ?: "dev"
+version = "1.0.0"
 val channel = System.getenv("MINESTOM_CHANNEL") ?: "local" // local, snapshot, release
 
 val shortDescription = "1.21 Lightweight Minecraft server"
@@ -66,7 +74,6 @@ sourceSets {
         }
         blossom {
             javaSources {
-
                 val gitCommit = System.getenv("GITHUB_SHA")
                 val gitBranch = System.getenv("GITHUB_REF")
                 val group = project.group as String?
@@ -104,6 +111,7 @@ tasks {
             attributes("Automatic-Module-Name" to "net.minestom.server")
         }
     }
+
     withType<Javadoc> {
         (options as? StandardJavadocDocletOptions)?.apply {
             encoding = "UTF-8"
@@ -117,83 +125,108 @@ tasks {
         }
     }
 
-    nexusPublishing {
-        useStaging.set(true)
-        this.packageGroup.set("net.minestom")
+//    nexusPublishing {
+//        useStaging.set(true)
+//        this.packageGroup.set("net.minestom")
+//
+//        transitionCheckOptions {
+//            maxRetries.set(360) // 1 hour
+//            delayBetween.set(Duration.ofSeconds(10))
+//        }
+//
+//        repositories.sonatype {
+//            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+//            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//
+//            if (System.getenv("SONATYPE_USERNAME") != null) {
+//                username.set(System.getenv("SONATYPE_USERNAME"))
+//                password.set(System.getenv("SONATYPE_PASSWORD"))
+//            }
+//        }
+//    }
 
-        transitionCheckOptions {
-            maxRetries.set(360) // 1 hour
-            delayBetween.set(Duration.ofSeconds(10))
-        }
+//    publishing.publications.create<MavenPublication>("maven") {
+//        groupId = "net.minestom"
+//        // todo: decide on publishing scheme
+//        artifactId = if (channel == "snapshot") "minestom-snapshots" else "minestom-snapshots"
+//        version = project.version.toString()
+//
+//        from(project.components["java"])
+//
+//        pom {
+//            name.set(this@create.artifactId)
+//            description.set(shortDescription)
+//            url.set("https://github.com/minestom/minestom")
+//
+//            licenses {
+//                license {
+//                    name.set("Apache 2.0")
+//                    url.set("https://github.com/minestom/minestom/blob/main/LICENSE")
+//                }
+//            }
+//
+//            developers {
+//                developer {
+//                    id.set("TheMode")
+//                }
+//                developer {
+//                    id.set("mworzala")
+//                    name.set("Matt Worzala")
+//                    email.set("matt@hollowcube.dev")
+//                }
+//            }
+//
+//            issueManagement {
+//                system.set("GitHub")
+//                url.set("https://github.com/minestom/minestom/issues")
+//            }
+//
+//            scm {
+//                connection.set("scm:git:git://github.com/minestom/minestom.git")
+//                developerConnection.set("scm:git:git@github.com:minestom/minestom.git")
+//                url.set("https://github.com/minestom/minestom")
+//                tag.set("HEAD")
+//            }
+//
+//            ciManagement {
+//                system.set("Github Actions")
+//                url.set("https://github.com/minestom/minestom/actions")
+//            }
+//        }
+//    }
 
-        repositories.sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//    signing {
+//        isRequired = System.getenv("CI") != null
+//
+//        val privateKey = System.getenv("GPG_PRIVATE_KEY")
+//        val keyPassphrase = System.getenv()["GPG_PASSPHRASE"]
+//        useInMemoryPgpKeys(privateKey, keyPassphrase)
+//
+//        sign(publishing.publications)
+//    }
+}
 
-            if (System.getenv("SONATYPE_USERNAME") != null) {
-                username.set(System.getenv("SONATYPE_USERNAME"))
-                password.set(System.getenv("SONATYPE_PASSWORD"))
-            }
-        }
+publishData {
+    useEldoNexusRepos()
+    publishComponent("java")
+}
+
+publishing {
+    publications.create<MavenPublication>("maven") {
+        publishData.configurePublication(this)
     }
 
-    publishing.publications.create<MavenPublication>("maven") {
-        groupId = "net.minestom"
-        // todo: decide on publishing scheme
-        artifactId = if (channel == "snapshot") "minestom-snapshots" else "minestom-snapshots"
-        version = project.version.toString()
-
-        from(project.components["java"])
-
-        pom {
-            name.set(this@create.artifactId)
-            description.set(shortDescription)
-            url.set("https://github.com/minestom/minestom")
-
-            licenses {
-                license {
-                    name.set("Apache 2.0")
-                    url.set("https://github.com/minestom/minestom/blob/main/LICENSE")
+    repositories {
+        maven {
+            authentication {
+                credentials(PasswordCredentials::class) {
+                    username = envProperties.getProperty("NEXUS_USERNAME")
+                    password = envProperties.getProperty("NEXUS_PASSWORD")
                 }
             }
 
-            developers {
-                developer {
-                    id.set("TheMode")
-                }
-                developer {
-                    id.set("mworzala")
-                    name.set("Matt Worzala")
-                    email.set("matt@hollowcube.dev")
-                }
-            }
-
-            issueManagement {
-                system.set("GitHub")
-                url.set("https://github.com/minestom/minestom/issues")
-            }
-
-            scm {
-                connection.set("scm:git:git://github.com/minestom/minestom.git")
-                developerConnection.set("scm:git:git@github.com:minestom/minestom.git")
-                url.set("https://github.com/minestom/minestom")
-                tag.set("HEAD")
-            }
-
-            ciManagement {
-                system.set("Github Actions")
-                url.set("https://github.com/minestom/minestom/actions")
-            }
+            name = "EldoNexus"
+            setUrl(publishData.getRepository())
         }
-    }
-
-    signing {
-        isRequired = System.getenv("CI") != null
-
-        val privateKey = System.getenv("GPG_PRIVATE_KEY")
-        val keyPassphrase = System.getenv()["GPG_PASSPHRASE"]
-        useInMemoryPgpKeys(privateKey, keyPassphrase)
-
-        sign(publishing.publications)
     }
 }
